@@ -389,14 +389,40 @@ Suggested endpoints:
 
 ```text
 POST   /api/admin/login
+GET    /api/admin/ledger
 GET    /api/admin/users
 PATCH  /api/admin/users/:id/status
 GET    /api/admin/withdrawals
 PATCH  /api/admin/withdrawals/:id
+GET    /api/admin/videos
 POST   /api/admin/videos
 PATCH  /api/admin/videos/:id
+POST   /api/admin/videos/upload
+GET    /api/admin/sponsored-content
 POST   /api/admin/campaigns
+PATCH  /api/admin/campaigns/:id
 ```
+
+### Video file upload
+
+`POST /api/admin/videos/upload` must accept `multipart/form-data` with these fields:
+
+| Field | Type | Description |
+|---|---|---|
+| `video` | File | MP4, WebM, or QuickTime video to store in managed object storage |
+| `title` | String | Admin-visible and user-visible video title |
+| `durationInSeconds` | Number | Expected playback duration |
+| `rewardAmount` | Number | Reward configured for an eligible completion |
+
+The endpoint must authenticate an administrator, enforce configured file-size and media limits, validate the actual file type rather than trusting its filename, store the asset outside the application process, and return the created video record. The frontend cannot provide durable uploads until this API and media storage are implemented.
+
+### Admin overview and content management
+
+- `GET /api/admin/ledger` returns the financial summary used by the admin overview.
+- `GET /api/admin/videos` and `GET /api/admin/sponsored-content` return their `videos` and `campaigns` arrays respectively.
+- `PATCH /api/admin/videos/:id` and `PATCH /api/admin/campaigns/:id` accept validated changes such as `isActive`.
+- `PATCH /api/admin/withdrawals/:id` accepts the documented review action and optional transaction reference.
+- Payment review/refund, audit history, and editable support/About content are required operational capabilities but do not yet have frontend routes or API contracts in this project.
 
 ## 10. Support and About Content
 

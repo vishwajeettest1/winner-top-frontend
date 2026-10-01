@@ -61,7 +61,7 @@ Do not put payment secrets, gateway keys, bank credentials, UPI PINs, or private
 
 | Route | Purpose |
 |---|---|
-| `/login` | Member sign-in |
+| `/login` | Shared sign-in; administrator accounts open the admin workspace |
 | `/register` | Account creation with mobile, email, password, and referral code |
 | `/verify-otp` | OTP verification after registration |
 | `/` | Dashboard and starter-plan entry point |
@@ -72,13 +72,14 @@ Do not put payment secrets, gateway keys, bank credentials, UPI PINs, or private
 | `/help` | Support contacts and FAQs |
 | `/about` | Mission, vision, story, team, achievements, contacts, and social links |
 
-Admin routes are protected by a separate admin token:
+Admin sign-in uses the same `/login` page and authenticates against the separate administrator endpoint. Admin routes are protected by a distinct admin token:
 
-- `/admin/login`
 - `/admin`
 - `/admin/users`
 - `/admin/withdrawals`
 - `/admin/content`
+
+`/admin/login` redirects to the shared sign-in page. Video-file uploads require the backend `POST /api/admin/videos/upload` multipart endpoint and managed media storage described in [BACKEND_REQUIREMENTS.md](BACKEND_REQUIREMENTS.md).
 
 ## Important Product Rules
 

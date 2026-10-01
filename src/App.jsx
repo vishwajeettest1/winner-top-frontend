@@ -14,7 +14,7 @@ import HelpCenter from "./pages/HelpCenter.jsx";
 import AboutUs from "./pages/AboutUs.jsx";
 import BottomNav from "./components/BottomNav.jsx";
 
-import AdminLogin from "./pages/admin/AdminLogin.jsx";
+import AdminLayout from "./pages/admin/AdminLayout.jsx";
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
 import AdminUsers from "./pages/admin/AdminUsers.jsx";
 import AdminWithdrawals from "./pages/admin/AdminWithdrawals.jsx";
@@ -28,8 +28,8 @@ function RequireAuth({ children }) {
 
 function RequireAdmin({ children }) {
   const token = localStorage.getItem("streamearn_admin_token");
-  if (!token) return <Navigate to="/admin/login" replace />;
-  return children;
+  if (!token) return <Navigate to="/login" replace />;
+  return <AdminLayout>{children}</AdminLayout>;
 }
 
 function ClientLayout({ children }) {
@@ -121,7 +121,10 @@ export default function App() {
             }
           />
 
-          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route
+            path="/admin/login"
+            element={<Navigate to="/login" replace />}
+          />
           <Route
             path="/admin"
             element={

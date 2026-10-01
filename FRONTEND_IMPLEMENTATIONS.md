@@ -35,6 +35,8 @@ This document distinguishes between frontend behavior present in the project and
 - Withdrawal countdown recalculates every second.
 - Direct OTP access without registration context redirects to registration.
 - Admin routes require a separate admin token and admin API requests use that token.
+- The shared login page checks the separate admin authentication endpoint first, routes administrators to the admin workspace, and stores admin and user tokens separately.
+- The admin workspace includes overview metrics, searchable user access management, pending withdrawal review, video-file upload UI, ad placements, and sponsored campaign management.
 - Watch completion state persists for the current local day and is visibly marked as Watched.
 - Wallet and Withdrawal amount controls keep their number spinners visible and use inline validation instead of browser popups.
 - Home, Wallet, Watch, Invite, Withdraw, Help, About, Login, and Sign Up share consistent motion, hover, and focus treatment.
@@ -43,7 +45,7 @@ This document distinguishes between frontend behavior present in the project and
 
 | Route | Purpose |
 |---|---|
-| `/login` | Existing member sign-in |
+| `/login` | Shared sign-in; administrator accounts open the admin workspace |
 | `/register` | New account creation with mobile, email, password, and optional referral code |
 | `/verify-otp` | Registration OTP verification |
 | `/` | Dashboard, balance summary, starter-plan entry point, and account shortcuts |
@@ -53,6 +55,10 @@ This document distinguishes between frontend behavior present in the project and
 | `/withdrawals` | $50 minimum withdrawal request, seven-day countdown, guide, and history |
 | `/help` | Support contacts and FAQ accordion |
 | `/about` | Mission, vision, product story, team, achievements, contacts, and social links |
+| `/admin` | Admin overview with user, content, withdrawal, and ledger metrics |
+| `/admin/users` | Search accounts and block or restore access |
+| `/admin/withdrawals` | Review pending payout requests |
+| `/admin/content` | Upload videos and manage placements and sponsored campaigns |
 
 ### Payment API contract
 

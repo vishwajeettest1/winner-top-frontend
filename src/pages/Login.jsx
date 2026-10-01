@@ -10,7 +10,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSweeping, setIsSweeping] = useState(false);
-  const { login } = useAuth();
+  const { login, logout } = useAuth();
   const navigate = useNavigate();
 
   async function handleSubmit(e) {
@@ -20,7 +20,21 @@ export default function Login() {
     window.setTimeout(() => setIsSweeping(false), 900);
     setIsSubmitting(true);
     try {
+      try {
+        const adminRes = await client.post("/admin/login", { email, password });
+        if (!adminRes.data?.token)
+          throw new Error("Admin login returned no token");
+        logout();
+        localStorage.setItem("streamearn_admin_token", adminRes.data.token);
+        navigate("/admin");
+        return;
+      } catch (adminErr) {
+        const status = adminErr.response?.status;
+        if (!status || ![400, 401, 403, 404].includes(status)) throw adminErr;
+      }
+
       const res = await client.post("/auth/login", { email, password });
+      localStorage.removeItem("streamearn_admin_token");
       login(res.data.token);
       navigate("/");
     } catch (err) {
