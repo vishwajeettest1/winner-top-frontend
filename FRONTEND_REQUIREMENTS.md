@@ -34,7 +34,7 @@
 
 7. **Withdrawal Period & Countdown**
 
-   * The minimum withdrawal amount should be **$50.00**.
+   * The minimum withdrawal amount should be **$100.00**.
    * The client should have a **7-day withdrawal period** for submitting a withdrawal request.
    * A **countdown timer** should be displayed showing the remaining time.
    * The system should also display the **expected withdrawal date** to the client.

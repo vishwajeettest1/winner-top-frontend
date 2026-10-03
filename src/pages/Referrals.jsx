@@ -1,5 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { FiCopy, FiSend, FiUsers } from "react-icons/fi";
+import {
+  FiChevronDown,
+  FiCopy,
+  FiRefreshCw,
+  FiSend,
+  FiUsers,
+} from "react-icons/fi";
 import client from "../api/client";
 import ClientPageHeader from "../components/ClientPageHeader.jsx";
 
@@ -27,6 +33,25 @@ const fallbackReferralHistory = [
   },
 ];
 
+function getReferralTimestamp(entry) {
+  const date = new Date(
+    entry.lastActivityAt ||
+      entry.joinedAt ||
+      entry.createdAt ||
+      entry.date ||
+      0,
+  ).getTime();
+  return Number.isNaN(date) ? 0 : date;
+}
+
+function sortReferralHistory(entries) {
+  if (!Array.isArray(entries)) return [...fallbackReferralHistory];
+  return [...entries].sort(
+    (first, second) =>
+      getReferralTimestamp(second) - getReferralTimestamp(first),
+  );
+}
+
 function getFallbackReferralStats() {
   const origin = window.location.origin;
 
@@ -44,32 +69,43 @@ export default function Referrals() {
   const [stats, setStats] = useState(() => getFallbackReferralStats());
   const [usingFallbackStats, setUsingFallbackStats] = useState(true);
   const [copyMessage, setCopyMessage] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState("");
+  const [expandedReferralId, setExpandedReferralId] = useState(null);
   const [referralHistory, setReferralHistory] = useState(() => {
     const saved = localStorage.getItem("streamearn_referral_history");
-    if (!saved) return fallbackReferralHistory;
+    if (!saved) return sortReferralHistory(fallbackReferralHistory);
     try {
-      return JSON.parse(saved);
+      return sortReferralHistory(JSON.parse(saved));
     } catch {
-      return fallbackReferralHistory;
+      return sortReferralHistory(fallbackReferralHistory);
     }
   });
 
+  async function loadReferralData() {
+    setRefreshing(true);
+    try {
+      const response = await client.get("/referrals/stats");
+      setStats(response.data);
+      setUsingFallbackStats(false);
+      setReferralHistory(
+        sortReferralHistory(
+          Array.isArray(response.data?.referralHistory)
+            ? response.data.referralHistory
+            : [],
+        ),
+      );
+      setRefreshError("");
+    } catch {
+      setUsingFallbackStats(true);
+      setRefreshError("Referral activity could not be refreshed.");
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
   useEffect(() => {
-    client
-      .get("/referrals/stats")
-      .then((res) => {
-        setStats(res.data);
-        setUsingFallbackStats(false);
-        if (
-          Array.isArray(res.data?.referralHistory) &&
-          res.data.referralHistory.length
-        ) {
-          setReferralHistory(res.data.referralHistory);
-        }
-      })
-      .catch(() => {
-        setUsingFallbackStats(true);
-      });
+    loadReferralData();
   }, []);
 
   useEffect(() => {
@@ -119,11 +155,11 @@ export default function Referrals() {
     }
   }
 
-  const activeEntries = referralHistory.filter(
-    (entry) => entry.status === "Active",
+  const activeEntries = referralHistory.filter((entry) =>
+    ["ACTIVE", "PAID"].includes(String(entry.status).toUpperCase()),
   ).length;
   const pendingEntries = referralHistory.filter(
-    (entry) => entry.status === "Pending",
+    (entry) => String(entry.status).toUpperCase() === "PENDING",
   ).length;
   const totalEarnings = referralHistory.reduce(
     (sum, entry) => sum + Number(entry.amount || 0),
@@ -219,33 +255,128 @@ export default function Referrals() {
       <section className="client-section referral-status-section">
         <div className="client-section-heading">
           <h2>Referral status</h2>
-          <span>{referralHistory.length} people</span>
+          <div className="wallet-history-controls">
+            <span className="wallet-history-count">
+              {referralHistory.length}{" "}
+              {referralHistory.length === 1 ? "person" : "people"}
+            </span>
+            <button
+              className="wallet-history-refresh"
+              type="button"
+              onClick={loadReferralData}
+              disabled={refreshing}
+              aria-label="Refresh referral history"
+            >
+              <FiRefreshCw
+                className={refreshing ? "is-refreshing" : ""}
+                aria-hidden="true"
+              />
+              <span>{refreshing ? "Refreshing" : "Refresh"}</span>
+            </button>
+          </div>
         </div>
+        {refreshError && (
+          <p className="client-empty compact" role="status">
+            {refreshError}
+          </p>
+        )}
+        {referralHistory.length ? (
+          <div className="wallet-list referral-status-list">
+            {referralHistory.map((entry) => {
+              const referralId = entry._id || entry.id;
+              const status = String(entry.status || "PENDING").toUpperCase();
+              const dateValue = entry.joinedAt || entry.createdAt || entry.date;
+              const joinedDate = dateValue ? new Date(dateValue) : null;
+              const isValidJoinedDate =
+                joinedDate && !Number.isNaN(joinedDate.getTime());
+              const details = [
+                ["Referral", entry.name || "Referral"],
+                ["Status", status.replaceAll("_", " ")],
+                ["Earned", `+$${Number(entry.amount || 0).toFixed(2)}`],
+                [
+                  "Joined",
+                  isValidJoinedDate
+                    ? joinedDate.toLocaleString()
+                    : "Date unavailable",
+                ],
+                [
+                  "Latest activity",
+                  entry.lastActivityAt
+                    ? new Date(entry.lastActivityAt).toLocaleString()
+                    : null,
+                ],
+              ].filter(
+                ([, value]) =>
+                  value !== undefined && value !== null && value !== "",
+              );
 
-        <div className="referral-status-head" aria-hidden="true">
-          <span>REFERRAL</span>
-          <span>STATUS</span>
-          <span>EARNED</span>
-        </div>
-        <div className="wallet-list referral-status-list">
-          {referralHistory.map((entry) => (
-            <article className="wallet-row" key={entry._id}>
-              <span className="wallet-row-icon" aria-hidden="true">
-                {entry.status === "Paid" ? "✓" : "↗"}
-              </span>
-              <div className="wallet-row-copy">
-                <strong>{entry.name}</strong>
-                <time dateTime={entry.joinedAt || entry.date}>
-                  {new Date(entry.joinedAt || entry.date).toLocaleDateString()}
-                </time>
-              </div>
-              <span className="wallet-row-status">{entry.status}</span>
-              <strong className="wallet-row-amount">
-                +${Number(entry.amount || 0).toFixed(2)}
-              </strong>
-            </article>
-          ))}
-        </div>
+              return (
+                <article className="wallet-history-item" key={referralId}>
+                  <button
+                    className="wallet-row wallet-history-row wallet-history-trigger referral-history-row"
+                    type="button"
+                    aria-expanded={expandedReferralId === referralId}
+                    aria-controls={`referral-details-${referralId}`}
+                    onClick={() =>
+                      setExpandedReferralId((current) =>
+                        current === referralId ? null : referralId,
+                      )
+                    }
+                  >
+                    <span className="wallet-row-icon" aria-hidden="true">
+                      {status === "PAID" ? "✓" : "+"}
+                    </span>
+                    <span className="wallet-row-copy wallet-history-copy">
+                      <strong>{entry.name || "Referral"}</strong>
+                      <time
+                        dateTime={
+                          isValidJoinedDate
+                            ? joinedDate.toISOString()
+                            : undefined
+                        }
+                      >
+                        {isValidJoinedDate
+                          ? joinedDate.toLocaleDateString()
+                          : "Date unavailable"}
+                      </time>
+                    </span>
+                    <span className="wallet-history-details">
+                      <span
+                        className={`wallet-row-status wallet-history-status status-${status.toLowerCase().replaceAll("_", "-")}`}
+                      >
+                        {status.replaceAll("_", " ")}
+                      </span>
+                    </span>
+                    <strong className="wallet-row-amount">
+                      +${Number(entry.amount || 0).toFixed(2)}
+                    </strong>
+                    <FiChevronDown
+                      className="wallet-history-chevron"
+                      aria-hidden="true"
+                    />
+                  </button>
+                  {expandedReferralId === referralId && (
+                    <div
+                      className="wallet-history-expanded"
+                      id={`referral-details-${referralId}`}
+                    >
+                      <dl className="wallet-history-fields">
+                        {details.map(([label, value]) => (
+                          <div key={label}>
+                            <dt>{label}</dt>
+                            <dd>{value}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="client-empty compact">No referral activity yet.</p>
+        )}
       </section>
     </main>
   );

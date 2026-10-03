@@ -17,7 +17,7 @@ const faqs = [
   {
     question: "When does my wallet balance update?",
     answer:
-      "Your wallet balance updates immediately after a video is completed and the reward is successfully credited. Video rewards and referral rewards are displayed in the wallet page.",
+      "Your wallet balance updates immediately after a video is completed and the reward is successfully credited. Video reward history is on the Watch page, referral activity is on the Invite page, and withdrawal requests are on the Withdraw page.",
   },
   {
     question: "How do referrals work?",

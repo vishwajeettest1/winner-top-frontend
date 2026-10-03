@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { FiLogOut } from "react-icons/fi";
+import { FiLogOut, FiPlus } from "react-icons/fi";
 import client from "../api/client";
 import { useAuth } from "../context/AuthContext.jsx";
 
@@ -96,7 +96,13 @@ export default function Dashboard() {
             ✳
           </span>
         </div>
-        <div className="home-balance-value">${totalBalance.toFixed(2)}</div>
+        <div className="home-balance-value-row">
+          <div className="home-balance-value">${totalBalance.toFixed(2)}</div>
+          <Link className="home-add-balance" to="/wallet">
+            <FiPlus aria-hidden="true" />
+            <span>Add balance</span>
+          </Link>
+        </div>
         <div className="home-earnings-row">
           <div>
             <span>VIDEO EARNINGS</span>
@@ -134,8 +140,13 @@ export default function Dashboard() {
           disabled={starterActive}
         >
           <span className="register-submit-label">
-            {starterActive ? "Starter plan active" : "Add $25 to activate"}
+            {starterActive ? "Starter plan active" : "Add $25.00 to activate"}
           </span>
+          {!starterActive && (
+            <span aria-hidden="true">
+              <FiPlus />
+            </span>
+          )}
         </button>
       </section>
 

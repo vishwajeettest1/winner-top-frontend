@@ -186,6 +186,51 @@ CREATED, PENDING, PAID, FAILED, REFUNDED, CANCELLED
 
 Return payment status so the frontend can show pending, successful, failed, or cancelled state after checkout.
 
+### `GET /api/deposit-options/active`
+
+Authentication required. Return only the currently active UPI deposit option configured by an administrator:
+
+```json
+{
+  "option": {
+    "id": "deposit-option-id",
+    "displayName": "Main UPI",
+    "upiId": "payments@examplebank",
+    "qrCodeUrl": "https://cdn.example.com/payment-qr/option.png"
+  }
+}
+```
+
+Return `404` with a safe error when no active option exists. Never accept the active option or UPI destination from an untrusted client as authoritative; resolve and validate it again when payment proof is submitted.
+
+### `POST /api/payments/submit-proof`
+
+Authentication required. Accept `multipart/form-data` from the manual UPI flow:
+
+| Field | Type | Requirements |
+|---|---|---|
+| `depositOptionId` | String | Required; must identify the currently active option |
+| `amount` | Decimal string | Required; validate against the minimum deposit and supported currency rules |
+| `utrNumber` | String | Required; trim and validate format/length, reject duplicate transaction references |
+| `paymentScreenshot` | File | Required PNG, JPEG, or WebP image, maximum 5 MB |
+
+Validate the amount, authenticated user, active deposit option, file signature and image contents server-side. Store the screenshot in managed private storage and create a payment record with status `PENDING_REVIEW`. Return the pending record ID and status. Do not credit the wallet, mark the deposit paid, or activate the starter plan when the proof is submitted. An uploaded screenshot is supporting evidence, not payment verification.
+
+### Admin review of UPI payment proofs
+
+Add these administrator-only endpoints:
+
+```text
+GET   /api/admin/payments?status=PENDING_REVIEW
+PATCH /api/admin/payments/:id
+```
+
+`GET /api/admin/payments?status=PENDING_REVIEW` returns `{ "payments": [...] }`. Each payment includes `id`, `user.email`, `amount`, `utrNumber`, `screenshotUrl`, `status`, and `createdAt`. `screenshotUrl` must be a short-lived authorized URL or be served through an administrator-authenticated endpoint; payment evidence must not be publicly accessible.
+
+`PATCH /api/admin/payments/:id` accepts `{ "action": "APPROVE" }` or `{ "action": "REJECT", "rejectionReason": "..." }`. Before approval, an administrator must verify the UTR and received amount against authoritative UPI/bank records. Approval must atomically mark the payment approved and create exactly one wallet ledger credit; if it is a valid starter-plan payment, activate the starter plan in the same transaction. Rejection must not credit the wallet. Record reviewer, decision time, reason, and audit event. Make decisions idempotent and prevent clients from changing payment status.
+
+The frontend uses the active-option endpoint to display the QR and UPI ID, then submits the entered amount, UTR, and screenshot for review. Bank-account payments continue to use the payment-gateway checkout flow. Customer-facing history should include pending, approved, and rejected payment submissions with their statuses.
+
 ## 5. Wallet and Ledger
 
 ### `GET /api/wallet/balance`
@@ -225,6 +270,7 @@ Ledger requirements:
 - Prevent duplicate entries using unique source/reference constraints.
 - Never calculate a balance by adding a frontend starter amount.
 - Use decimal-safe money storage, not binary floating-point arithmetic.
+- Include manually submitted UPI payments in deposit history with `PENDING_REVIEW`, `APPROVED`, or `REJECTED` status; only approved payments create ledger credits.
 
 ## 6. Videos and Rewards
 
@@ -308,7 +354,16 @@ Return:
   "activeReferrals": 1,
   "pendingReferrals": 1,
   "totalReferralEarnings": 36.5,
-  "referralHistory": []
+  "referralHistory": [
+    {
+      "id": "referral-id",
+      "name": "Referral 12ABC",
+      "status": "Active",
+      "amount": 12.5,
+      "joinedAt": "2026-09-25T12:00:00.000Z",
+      "lastActivityAt": "2026-10-03T12:00:00.000Z"
+    }
+  ]
 }
 ```
 
@@ -332,13 +387,21 @@ Request:
 
 ```json
 {
-  "amount": 50
+  "amount": 100,
+  "payoutMethod": "UPI",
+  "payoutDetails": {
+    "name": "Account holder",
+    "upiId": "name@bank"
+  }
 }
 ```
 
 Rules:
 
-- Enforce a minimum withdrawal amount of `$50.00`.
+- Enforce a minimum withdrawal amount of `$100.00`.
+- Require `payoutMethod` to be either `UPI` or `BANK` and save it with the withdrawal.
+- For `UPI`, require `payoutDetails.name` and `payoutDetails.upiId`. For `BANK`, require `accountHolderName`, `bankName`, `accountNumber`, and `routingCode` in `payoutDetails`.
+- Validate the required payout details for the selected method and encrypt them at rest. Configure a separate `PAYOUT_ENCRYPTION_KEY`; if omitted, the backend derives a purpose-specific key from `JWT_SECRET`.
 - Confirm available balance from the server ledger.
 - Prevent spending the same balance twice.
 - Create a pending withdrawal with an authoritative `requestedAt` and deadline.
@@ -404,6 +467,8 @@ PATCH  /api/admin/campaigns/:id
 GET    /api/admin/deposit-options
 POST   /api/admin/deposit-options
 PATCH  /api/admin/deposit-options/:id/active
+GET    /api/admin/payments?status=PENDING_REVIEW
+PATCH  /api/admin/payments/:id
 ```
 
 ### Video file upload
@@ -460,13 +525,15 @@ Require an administrator token and accept `multipart/form-data`:
 | `upiId` | String | Required, trimmed, validated UPI address, maximum 120 characters |
 | `qrCode` | File | Required PNG, JPEG, or WebP image, maximum 5 MB |
 
-Store the QR image in managed object storage, validate its actual file signature and image contents (not just the supplied MIME type or filename), and return the created option. New options must default to inactive and must not displace the current active option.
+Allow administrators to store up to 10 QR options. Store each QR image in managed object storage, validate its actual file signature and image contents (not just the supplied MIME type or filename), and return the created option. New options must default to inactive and must not displace the current active option.
 
 #### `PATCH /api/admin/deposit-options/:id/active`
 
 Require an administrator token and accept `{ "isActive": true }` to select an option. The backend must atomically deactivate every other option and activate the requested option in the same transaction. Enforce the single-active invariant in persistent storage as well, so concurrent requests cannot leave multiple active options. `{ "isActive": false }` may deactivate the selected option, leaving no active option.
 
 The admin frontend fetches the list on page load and after mutations. All changes must be persisted by the API; frontend radio selection alone is not authoritative. Customer payment creation must use only the server-side active option, and a QR display or client redirect must never be treated as payment confirmation. Do not store UPI PINs, bank passwords, or other customer payment credentials.
+
+For frontend-only local testing, when these endpoints return `404`, the application can store uploaded QR images and submitted proof files in the current browser's IndexedDB. This local demo data is not shared between devices or users and is not production storage. A local demo approval must never change a wallet balance; production payment verification and ledger credit require the administrator API and server-side records above.
 
 ## 10. Support and About Content
 

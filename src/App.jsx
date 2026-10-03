@@ -19,7 +19,8 @@ import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
 import AdminUsers from "./pages/admin/AdminUsers.jsx";
 import AdminWithdrawals from "./pages/admin/AdminWithdrawals.jsx";
 import AdminContent from "./pages/admin/AdminContent.jsx";
-import AdminDepaosit from "./pages/admin/AdminDepaosit.jsx";
+import AdminDeposit from "./pages/admin/AdminDeposit.jsx";
+import AdminDepositHistory from "./pages/admin/AdminDepositHistory.jsx";
 
 function RequireAuth({ children }) {
   const { token } = useAuth();
@@ -162,9 +163,21 @@ export default function App() {
             path="/admin/deposits"
             element={
               <RequireAdmin>
-                <AdminDepaosit />
+                <AdminDeposit />
               </RequireAdmin>
             }
+          />
+          <Route
+            path="/admin/deposits/history"
+            element={
+              <RequireAdmin>
+                <AdminDepositHistory />
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/payments"
+            element={<Navigate to="/admin/deposits/history" replace />}
           />
         </Routes>
       </BrowserRouter>

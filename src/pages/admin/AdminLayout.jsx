@@ -1,6 +1,7 @@
-import React from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
+  FiChevronDown,
   FiCreditCard,
   FiDollarSign,
   FiGrid,
@@ -13,12 +14,18 @@ const navigation = [
   { to: "/admin", label: "Overview", icon: FiGrid, end: true },
   { to: "/admin/users", label: "Users", icon: FiUsers },
   { to: "/admin/withdrawals", label: "Withdrawals", icon: FiCreditCard },
-  { to: "/admin/deposits", label: "Deposits", icon: FiDollarSign },
   { to: "/admin/content", label: "Video content", icon: FiVideo },
 ];
 
 export default function AdminLayout({ children }) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isDepositRoute = location.pathname.startsWith("/admin/deposits");
+  const [depositsOpen, setDepositsOpen] = useState(isDepositRoute);
+
+  useEffect(() => {
+    if (isDepositRoute) setDepositsOpen(true);
+  }, [isDepositRoute]);
 
   function signOut() {
     localStorage.removeItem("streamearn_admin_token");
@@ -61,6 +68,41 @@ export default function AdminLayout({ children }) {
               <span>{label}</span>
             </NavLink>
           ))}
+          <div
+            className={`admin-nav-group${isDepositRoute ? " is-active" : ""}`}
+          >
+            <button
+              className={`admin-nav-link admin-nav-toggle${isDepositRoute ? " is-active" : ""}`}
+              type="button"
+              aria-expanded={depositsOpen}
+              onClick={() => setDepositsOpen((open) => !open)}
+            >
+              <FiDollarSign aria-hidden="true" />
+              <span>Wallet Deposits</span>
+              <FiChevronDown className="admin-nav-chevron" aria-hidden="true" />
+            </button>
+            {depositsOpen && (
+              <div className="admin-subnav">
+                <NavLink
+                  to="/admin/deposits"
+                  end
+                  className={({ isActive }) =>
+                    `admin-subnav-link${isActive ? " is-active" : ""}`
+                  }
+                >
+                  Wallet Deposit Payment
+                </NavLink>
+                <NavLink
+                  to="/admin/deposits/history"
+                  className={({ isActive }) =>
+                    `admin-subnav-link${isActive ? " is-active" : ""}`
+                  }
+                >
+                  Wallet Deposit History
+                </NavLink>
+              </div>
+            )}
+          </div>
         </nav>
         <div className="admin-sidebar-bottom">
           <span className="admin-access-label">

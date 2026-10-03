@@ -1,10 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { FiImage, FiRefreshCw, FiUpload } from "react-icons/fi";
 import client from "../../api/client";
+import {
+  addLocalDepositOption,
+  getLocalDepositOptions,
+  isMissingPaymentApi,
+  setLocalActiveDepositOption,
+} from "../../api/depositLocalStore.js";
 
 const MAX_QR_SIZE = 5 * 1024 * 1024;
 
-export default function AdminDepaosit() {
+export default function AdminDeposit() {
   const [options, setOptions] = useState([]);
   const [displayName, setDisplayName] = useState("");
   const [upiId, setUpiId] = useState("");
@@ -15,6 +21,7 @@ export default function AdminDepaosit() {
   const [selectingId, setSelectingId] = useState(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [localDemo, setLocalDemo] = useState(false);
 
   useEffect(() => {
     if (!qrFile) {
@@ -31,12 +38,26 @@ export default function AdminDepaosit() {
     try {
       const response = await client.get("/admin/deposit-options");
       setOptions(response.data.options || []);
+      setLocalDemo(false);
       setError("");
     } catch (requestError) {
-      setError(
-        requestError.response?.data?.error ||
-          "Could not load deposit options. Check that the admin deposit API is available.",
-      );
+      if (isMissingPaymentApi(requestError)) {
+        try {
+          setOptions(await getLocalDepositOptions());
+          setLocalDemo(true);
+          setError("");
+        } catch (storageError) {
+          setError(
+            storageError.message ||
+              "Could not load saved local deposit options.",
+          );
+        }
+      } else {
+        setError(
+          requestError.response?.data?.error ||
+            "Could not load deposit options. Check that the admin deposit API is available.",
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -69,12 +90,29 @@ export default function AdminDepaosit() {
     formData.append("qrCode", qrFile);
 
     setSaving(true);
+    let savedLocally = false;
     try {
-      await client.post("/admin/deposit-options", formData);
+      try {
+        await client.post("/admin/deposit-options", formData);
+        setLocalDemo(false);
+      } catch (requestError) {
+        if (!isMissingPaymentApi(requestError)) throw requestError;
+        await addLocalDepositOption({
+          displayName: displayName.trim(),
+          upiId: upiId.trim(),
+          qrFile,
+        });
+        savedLocally = true;
+        setLocalDemo(true);
+      }
       setDisplayName("");
       setUpiId("");
       setQrFile(null);
-      setMessage("Deposit option added.");
+      setMessage(
+        savedLocally
+          ? "Deposit option saved in this browser for local testing."
+          : "Deposit option added.",
+      );
       await loadOptions();
     } catch (requestError) {
       setError(
@@ -90,16 +128,31 @@ export default function AdminDepaosit() {
     const optionId = option._id || option.id;
     if (!optionId || option.isActive) return;
 
+    const previousOptions = options;
+    setOptions((currentOptions) =>
+      currentOptions.map((currentOption) => ({
+        ...currentOption,
+        isActive: (currentOption._id || currentOption.id) === optionId,
+      })),
+    );
     setSelectingId(optionId);
     setError("");
     setMessage("");
     try {
-      await client.patch(`/admin/deposit-options/${optionId}/active`, {
-        isActive: true,
-      });
+      try {
+        await client.patch(`/admin/deposit-options/${optionId}/active`, {
+          isActive: true,
+        });
+        setLocalDemo(false);
+      } catch (requestError) {
+        if (!isMissingPaymentApi(requestError)) throw requestError;
+        await setLocalActiveDepositOption(optionId);
+        setLocalDemo(true);
+      }
       setMessage(`${option.displayName} is now the active deposit option.`);
       await loadOptions();
     } catch (requestError) {
+      setOptions(previousOptions);
       setError(
         requestError.response?.data?.error ||
           "Could not change the active deposit option.",
@@ -116,7 +169,7 @@ export default function AdminDepaosit() {
       <div className="admin-page-heading">
         <div>
           <p className="admin-eyebrow">PAYMENT CONFIGURATION</p>
-          <h2>Deposit options</h2>
+          <h2>Wallet deposit options</h2>
           <p>
             Add UPI payment details and choose the single option shown to
             customers.
@@ -135,6 +188,12 @@ export default function AdminDepaosit() {
       {message && (
         <div className="admin-notice admin-notice-success" role="status">
           {message}
+        </div>
+      )}
+      {localDemo && (
+        <div className="admin-notice admin-notice-demo" role="status">
+          Local demo mode: deposit options are saved only in this browser.
+          Connect the backend to share them with users on other devices.
         </div>
       )}
 

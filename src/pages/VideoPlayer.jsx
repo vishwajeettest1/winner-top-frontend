@@ -80,6 +80,7 @@ function getDailyCompletedVideos() {
 
 export default function VideoPlayer() {
   const [videos, setVideos] = useState(FALLBACK_VIDEOS);
+  const [videoRewards, setVideoRewards] = useState([]);
   const [cap, setCap] = useState(REQUIRED_VIDEO_COUNT);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -102,6 +103,12 @@ export default function VideoPlayer() {
         videoRef.current.src = "";
       }
     };
+  }, []);
+
+  useEffect(() => {
+    loadVideoRewards();
+    window.addEventListener("wallet:updated", loadVideoRewards);
+    return () => window.removeEventListener("wallet:updated", loadVideoRewards);
   }, []);
 
   useEffect(() => {
@@ -144,6 +151,15 @@ export default function VideoPlayer() {
       setCap(REQUIRED_VIDEO_COUNT);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadVideoRewards() {
+    try {
+      const response = await client.get("/wallet/transactions");
+      setVideoRewards(response.data.videoRewards || []);
+    } catch {
+      setVideoRewards([]);
     }
   }
 
@@ -384,6 +400,41 @@ export default function VideoPlayer() {
           </p>
         </div>
       )}
+
+      <section className="client-section" aria-label="Video reward history">
+        <div className="client-section-heading">
+          <h2>Video reward history</h2>
+          <span>{videoRewards.length} entries</span>
+        </div>
+        {videoRewards.length ? (
+          <div className="wallet-list">
+            {videoRewards.map((transaction) => (
+              <article className="wallet-row" key={transaction._id}>
+                <span className="wallet-row-icon" aria-hidden="true">
+                  ▶
+                </span>
+                <div className="wallet-row-copy">
+                  <strong>
+                    {transaction.sourceType === "sponsored"
+                      ? "Sponsored video"
+                      : "Ad network video"}
+                  </strong>
+                  <time dateTime={transaction.watchedAt}>
+                    {new Date(transaction.watchedAt).toLocaleDateString()}
+                  </time>
+                </div>
+                <strong className="wallet-row-amount">
+                  +${Number(transaction.rewardCredited || 0).toFixed(4)}
+                </strong>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="client-empty compact">
+            Your completed video rewards will appear here.
+          </p>
+        )}
+      </section>
     </main>
   );
 }

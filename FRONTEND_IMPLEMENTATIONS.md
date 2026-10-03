@@ -52,7 +52,7 @@ This document distinguishes between frontend behavior present in the project and
 | `/watch` | Daily videos, full-watch progress, reward completion, and watched state |
 | `/wallet` | Balance, Add Money via UPI/bank, starter status, and transaction summaries |
 | `/referrals` | Referral link, native share, invite stats, and referral statuses |
-| `/withdrawals` | $50 minimum withdrawal request, seven-day countdown, guide, and history |
+| `/withdrawals` | $100 minimum withdrawal request, seven-day countdown, guide, and history |
 | `/help` | Support contacts and FAQ accordion |
 | `/about` | Mission, vision, product story, team, achievements, contacts, and social links |
 | `/admin` | Admin overview with user, content, withdrawal, and ledger metrics |

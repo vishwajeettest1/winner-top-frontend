@@ -68,7 +68,7 @@ Do not put payment secrets, gateway keys, bank credentials, UPI PINs, or private
 | `/watch` | Daily videos and full-watch reward flow |
 | `/wallet` | Balance, Add Money, starter status, and transactions |
 | `/referrals` | Referral link, sharing, stats, and statuses |
-| `/withdrawals` | $50 minimum withdrawal request and seven-day tracking |
+| `/withdrawals` | $100 minimum withdrawal request and seven-day tracking |
 | `/help` | Support contacts and FAQs |
 | `/about` | Mission, vision, story, team, achievements, contacts, and social links |
 
@@ -85,7 +85,7 @@ Admin sign-in uses the same `/login` page and authenticates against the separate
 
 - Starter activation uses a fixed `$25.00` amount.
 - A wallet is not credited from local storage or frontend-only activation.
-- Withdrawal requests require at least `$50.00`.
+- Withdrawal requests require at least `$100.00`.
 - Rewards are requested only after a video reaches full completion.
 - The daily watch cap is displayed and tracked in the Watch flow.
 - Watched video state is visibly marked for the current local day.
