@@ -2648,6 +2648,8 @@ th, td { text-align: left; padding: 8px; border-bottom: 1px solid #2a2d34; font-
   --admin-line: #303a32;
   --admin-muted: #98a39a;
   --admin-green: #c9f36b;
+  --home-line: var(--admin-line);
+  --home-accent: var(--admin-green);
   min-height: 100vh;
   display: grid;
   grid-template-columns: 238px minmax(0, 1fr);
@@ -2665,6 +2667,8 @@ th, td { text-align: left; padding: 8px; border-bottom: 1px solid #2a2d34; font-
   background: #151a16;
 }
 .admin-brand { display: flex; align-items: center; gap: 11px; padding: 0 8px 28px; font-size: 12px; font-weight: 800; letter-spacing: 1px; }
+.admin-mobile-brand-row { display: contents; }
+.admin-mobile-brand-logout { display: none; }
 .admin-brand-mark { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 8px; color: #11170d; background: var(--admin-green); font-family: Georgia, serif; font-size: 21px; }
 .admin-brand small { display: block; margin-top: 4px; color: var(--admin-muted); font-size: 9px; font-weight: 650; letter-spacing: 1px; }
 .admin-navigation { display: grid; gap: 5px; }
@@ -2675,14 +2679,10 @@ th, td { text-align: left; padding: 8px; border-bottom: 1px solid #2a2d34; font-
 .admin-sidebar-bottom { margin-top: auto; padding: 14px 7px 0; border-top: 1px solid var(--admin-line); }
 .admin-access-label { display: flex; align-items: center; gap: 8px; color: #758077; font-size: 9px; font-weight: 750; letter-spacing: 1px; }
 .admin-access-label span { width: 6px; height: 6px; border-radius: 50%; background: var(--admin-green); }
-.admin-signout, .admin-mobile-signout { min-height: 40px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin-top: 12px; padding: 0 10px; border: 1px solid transparent; border-radius: 5px; color: #a7b0a8; background: transparent; font: inherit; font-size: 12px; cursor: pointer; }
-.admin-signout:hover, .admin-mobile-signout:hover { border-color: var(--admin-line); color: #fff; }
-.admin-signout svg, .admin-mobile-signout svg { width: 16px; height: 16px; }
 .admin-main { min-width: 0; }
 .admin-topbar { min-height: 92px; display: flex; align-items: center; justify-content: space-between; padding: 17px clamp(20px, 4vw, 54px); border-bottom: 1px solid var(--admin-line); background: #141915; }
 .admin-topbar-kicker, .admin-eyebrow { color: #98ab81; font-size: 9px; font-weight: 750; letter-spacing: 1.3px; }
 .admin-topbar h1 { margin: 6px 0 0; color: #eff2ec; font-size: 18px; font-weight: 650; }
-.admin-mobile-signout { display: none; margin: 0; }
 .admin-page-content { max-width: 1440px; margin: 0 auto; padding: 34px clamp(20px, 4vw, 54px) 60px; }
 .admin-page-content .container { width: 100%; max-width: none; margin: 0; padding: 0; }
 .admin-page-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
@@ -2724,15 +2724,18 @@ th, td { text-align: left; padding: 8px; border-bottom: 1px solid #2a2d34; font-
 @media (max-width: 680px) {
   .admin-shell { display: block; }
   .admin-sidebar { position: static; width: 100%; height: auto; padding: 12px 14px 0; border-right: 0; border-bottom: 1px solid var(--admin-line); }
-  .admin-brand { padding: 0 3px 12px; font-size: 11px; }
+  .admin-mobile-brand-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
+  .admin-mobile-brand-logout { position: relative; top: -3px; display: inline-flex; order: 1; flex: 0 0 auto; min-height: 36px; margin: 0; padding: 0 8px; font-size: 10px; }
+  .admin-desktop-logout { display: none; }
+  .admin-brand { order: 0; flex: 1; min-width: 0; padding: 0 3px 12px; font-size: 11px; }
   .admin-brand-mark { width: 30px; height: 30px; font-size: 18px; }
-  .admin-navigation { display: flex; gap: 5px; overflow-x: auto; padding-bottom: 10px; }
-  .admin-nav-link { min-width: max-content; min-height: 38px; padding: 0 10px; font-size: 11px; }
+  .admin-navigation { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; padding-bottom: 10px; }
+  .admin-nav-link { min-width: 0; min-height: 42px; justify-content: center; gap: 6px; padding: 5px 4px; font-size: 10px; text-align: center; }
+  .admin-nav-link span { min-width: 0; overflow-wrap: anywhere; }
   .admin-sidebar-bottom { display: none; }
   .admin-topbar { min-height: 66px; padding: 11px 17px; }
   .admin-topbar-kicker { font-size: 8px; }
   .admin-topbar h1 { font-size: 15px; }
-  .admin-mobile-signout { display: inline-flex; }
   .admin-page-content { padding: 24px 16px 42px; }
   .admin-page-heading { align-items: flex-start; }
   .admin-page-heading h2 { font-size: 23px; }
@@ -2788,4 +2791,21 @@ th, td { text-align: left; padding: 8px; border-bottom: 1px solid #2a2d34; font-
   .admin-table-controls { grid-template-columns: 1fr; }
   .admin-form-grid { grid-template-columns: 1fr; }
   .admin-field-wide { grid-column: auto; }
+  .admin-table-scroll { overscroll-behavior-x: contain; scrollbar-width: thin; }
+  .admin-data-table th, .admin-data-table td { padding: 11px 10px; }
+}
+.admin-deposit-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.admin-field-hint { color: #819080; font-size: 10px; font-weight: 450; }
+.admin-qr-preview { width: 148px; display: grid; justify-items: center; gap: 7px; padding: 10px; border: 1px solid var(--admin-line); border-radius: 5px; background: #111712; }
+.admin-qr-preview img { width: 120px; height: 120px; object-fit: contain; background: #fff; }
+.admin-qr-preview span { display: inline-flex; align-items: center; gap: 5px; color: #9daa9b; font-size: 10px; }
+.admin-qr-preview svg { width: 13px; height: 13px; }
+.admin-deposit-table { min-width: 760px; }
+.admin-deposit-radio { width: 17px; height: 17px; margin: 0; accent-color: #c9f36b; cursor: pointer; }
+.admin-deposit-radio:disabled { cursor: progress; }
+.admin-qr-link { display: inline-flex; align-items: center; gap: 8px; color: #c9f36b; font-size: 10px; text-decoration: none; white-space: nowrap; }
+.admin-qr-link img { width: 38px; height: 38px; padding: 2px; border-radius: 3px; object-fit: contain; background: #fff; }
+.admin-deposit-note { margin: 12px 0 0; color: #89958a; font-size: 10px; line-height: 1.5; }
+@media (max-width: 560px) {
+  .admin-deposit-form { grid-template-columns: 1fr; }
 }

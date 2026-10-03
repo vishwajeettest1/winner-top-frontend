@@ -401,6 +401,9 @@ POST   /api/admin/videos/upload
 GET    /api/admin/sponsored-content
 POST   /api/admin/campaigns
 PATCH  /api/admin/campaigns/:id
+GET    /api/admin/deposit-options
+POST   /api/admin/deposit-options
+PATCH  /api/admin/deposit-options/:id/active
 ```
 
 ### Video file upload
@@ -423,6 +426,47 @@ The endpoint must authenticate an administrator, enforce configured file-size an
 - `PATCH /api/admin/videos/:id` and `PATCH /api/admin/campaigns/:id` accept validated changes such as `isActive`.
 - `PATCH /api/admin/withdrawals/:id` accepts the documented review action and optional transaction reference.
 - Payment review/refund, audit history, and editable support/About content are required operational capabilities but do not yet have frontend routes or API contracts in this project.
+
+### Admin deposit options
+
+The admin deposit page reads and manages UPI payment options using these endpoints:
+
+#### `GET /api/admin/deposit-options`
+
+Require an administrator token. Return options with the active option first:
+
+```json
+{
+  "options": [
+    {
+      "id": "deposit-option-id",
+      "displayName": "Main UPI",
+      "upiId": "payments@examplebank",
+      "qrCodeUrl": "https://cdn.example.com/payment-qr/option.png",
+      "isActive": true,
+      "createdAt": "2026-10-01T12:00:00.000Z"
+    }
+  ]
+}
+```
+
+#### `POST /api/admin/deposit-options`
+
+Require an administrator token and accept `multipart/form-data`:
+
+| Field | Type | Requirements |
+|---|---|---|
+| `displayName` | String | Required, trimmed, maximum 60 characters |
+| `upiId` | String | Required, trimmed, validated UPI address, maximum 120 characters |
+| `qrCode` | File | Required PNG, JPEG, or WebP image, maximum 5 MB |
+
+Store the QR image in managed object storage, validate its actual file signature and image contents (not just the supplied MIME type or filename), and return the created option. New options must default to inactive and must not displace the current active option.
+
+#### `PATCH /api/admin/deposit-options/:id/active`
+
+Require an administrator token and accept `{ "isActive": true }` to select an option. The backend must atomically deactivate every other option and activate the requested option in the same transaction. Enforce the single-active invariant in persistent storage as well, so concurrent requests cannot leave multiple active options. `{ "isActive": false }` may deactivate the selected option, leaving no active option.
+
+The admin frontend fetches the list on page load and after mutations. All changes must be persisted by the API; frontend radio selection alone is not authoritative. Customer payment creation must use only the server-side active option, and a QR display or client redirect must never be treated as payment confirmation. Do not store UPI PINs, bank passwords, or other customer payment credentials.
 
 ## 10. Support and About Content
 

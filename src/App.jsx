@@ -19,6 +19,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
 import AdminUsers from "./pages/admin/AdminUsers.jsx";
 import AdminWithdrawals from "./pages/admin/AdminWithdrawals.jsx";
 import AdminContent from "./pages/admin/AdminContent.jsx";
+import AdminDepaosit from "./pages/admin/AdminDepaosit.jsx";
 
 function RequireAuth({ children }) {
   const { token } = useAuth();
@@ -154,6 +155,14 @@ export default function App() {
             element={
               <RequireAdmin>
                 <AdminContent />
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/deposits"
+            element={
+              <RequireAdmin>
+                <AdminDepaosit />
               </RequireAdmin>
             }
           />
