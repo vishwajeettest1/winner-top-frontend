@@ -49,6 +49,8 @@ The API base URL defaults to:
 http://localhost:5000/api
 ```
 
+This default only works when the StreamEarn backend is running on the same machine at port `5000`. For a deployed frontend, set `VITE_API_BASE_URL` to the reachable backend's `/api` URL before building.
+
 Set a different API URL with a Vite environment variable:
 
 ```text

@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { FiLogOut, FiPlus } from "react-icons/fi";
+import { FiPlus } from "react-icons/fi";
 import client from "../api/client";
+import ProfileMenu from "../components/ProfileMenu.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 
 const STARTER_AMOUNT = 25;
 
 export default function Dashboard() {
-  const { user, logout } = useAuth();
+  const { user, profileError } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [wallet, setWallet] = useState(null);
@@ -55,12 +56,7 @@ export default function Dashboard() {
             stream<span>earn</span>
           </span>
         </Link>
-        <button className="home-logout" onClick={logout} aria-label="Log out">
-          <span className="home-logout-icon" aria-hidden="true">
-            <FiLogOut />
-          </span>
-          <span>Log out</span>
-        </button>
+        <ProfileMenu />
       </header>
 
       {showVerifiedMessage && (
@@ -75,6 +71,12 @@ export default function Dashboard() {
           <span>
             Account created and verified successfully. Welcome to StreamEarn!
           </span>
+        </div>
+      )}
+
+      {profileError && (
+        <div className="client-feedback is-error" role="alert">
+          {profileError}
         </div>
       )}
 

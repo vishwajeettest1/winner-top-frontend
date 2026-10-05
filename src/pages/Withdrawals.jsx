@@ -3,24 +3,15 @@ import { Link } from "react-router-dom";
 import {
   FiArrowRight,
   FiChevronDown,
-  FiCreditCard,
   FiRefreshCw,
-  FiSmartphone,
   FiX,
 } from "react-icons/fi";
 import client from "../api/client";
 import ClientPageHeader from "../components/ClientPageHeader.jsx";
+import PayoutSummary from "../components/PayoutSummary.jsx";
 
 const WITHDRAWAL_WINDOW_DAYS = 7;
 const MIN_WITHDRAWAL_AMOUNT = 100;
-const emptyPayoutDetails = {
-  name: "",
-  upiId: "",
-  accountHolderName: "",
-  bankName: "",
-  accountNumber: "",
-  routingCode: "",
-};
 
 function getExpectedWithdrawalDate(createdAt) {
   const date = new Date(createdAt || Date.now());
@@ -63,8 +54,8 @@ export default function Withdrawals() {
   const [now, setNow] = useState(Date.now());
   const [expandedWithdrawalId, setExpandedWithdrawalId] = useState(null);
   const [withdrawalDialogOpen, setWithdrawalDialogOpen] = useState(false);
-  const [payoutMethod, setPayoutMethod] = useState("");
-  const [payoutDetails, setPayoutDetails] = useState(emptyPayoutDetails);
+  const [savedPayout, setSavedPayout] = useState(null);
+  const [payoutLoading, setPayoutLoading] = useState(false);
   const [withdrawalSubmitting, setWithdrawalSubmitting] = useState(false);
   const [withdrawalDialogError, setWithdrawalDialogError] = useState("");
 
@@ -143,47 +134,36 @@ export default function Withdrawals() {
       return;
     }
 
-    setPayoutMethod("");
-    setPayoutDetails(emptyPayoutDetails);
     setWithdrawalDialogError("");
     setWithdrawalDialogOpen(true);
+    setPayoutLoading(true);
+    try {
+      const response = await client.get("/user/payout-details");
+      setSavedPayout(response.data);
+    } catch {
+      setSavedPayout(null);
+      setWithdrawalDialogError("Payout details could not be loaded. Try again.");
+    } finally {
+      setPayoutLoading(false);
+    }
   }
 
   async function confirmWithdrawal(event) {
     event.preventDefault();
-    if (!payoutMethod) {
-      setWithdrawalDialogError("Choose UPI or Bank to continue.");
-      return;
-    }
-    const destinationDetails =
-      payoutMethod === "UPI"
-        ? { name: payoutDetails.name.trim(), upiId: payoutDetails.upiId.trim() }
-        : {
-            accountHolderName: payoutDetails.accountHolderName.trim(),
-            bankName: payoutDetails.bankName.trim(),
-            accountNumber: payoutDetails.accountNumber.trim(),
-            routingCode: payoutDetails.routingCode.trim(),
-          };
-    if (Object.values(destinationDetails).some((value) => !value)) {
-      setWithdrawalDialogError("Complete all payout details to continue.");
+    if (!savedPayout?.payoutMethod) {
+      setWithdrawalDialogError("Add your payout details in Manage Payments first.");
       return;
     }
 
     setWithdrawalSubmitting(true);
     setWithdrawalDialogError("");
     try {
-      await client.post("/withdrawals/request", {
-        amount: Number(amount),
-        payoutMethod,
-        payoutDetails: destinationDetails,
-      });
+      await client.post("/withdrawals/request", { amount: Number(amount) });
       setMessage(
         "Withdrawal requested. It will be reviewed within a few business days.",
       );
       setAmount("");
       setWithdrawalDialogOpen(false);
-      setPayoutMethod("");
-      setPayoutDetails(emptyPayoutDetails);
       loadHistory();
     } catch (err) {
       setWithdrawalDialogError(
@@ -197,13 +177,6 @@ export default function Withdrawals() {
   function closeWithdrawalDialog() {
     if (withdrawalSubmitting) return;
     setWithdrawalDialogOpen(false);
-    setPayoutMethod("");
-    setPayoutDetails(emptyPayoutDetails);
-    setWithdrawalDialogError("");
-  }
-
-  function updatePayoutDetails(name, value) {
-    setPayoutDetails((current) => ({ ...current, [name]: value }));
     setWithdrawalDialogError("");
   }
 
@@ -491,10 +464,10 @@ export default function Withdrawals() {
             <header className="withdrawal-method-header">
               <div>
                 <span className="withdrawal-form-eyebrow">PAYOUT METHOD</span>
-                <h2 id="withdrawal-method-title">Choose how to get paid</h2>
+                <h2 id="withdrawal-method-title">Confirm your payout</h2>
                 <p>
-                  Select a payout method for your ${Number(amount).toFixed(2)}{" "}
-                  request.
+                  Review where your ${Number(amount).toFixed(2)}{" "}
+                  request will be sent.
                 </p>
               </div>
               <button
@@ -508,131 +481,28 @@ export default function Withdrawals() {
               </button>
             </header>
             <form onSubmit={confirmWithdrawal}>
-              <fieldset className="wallet-payment-methods withdrawal-payout-methods">
-                <legend>Choose payout method</legend>
-                <label className={payoutMethod === "UPI" ? "is-selected" : ""}>
-                  <input
-                    type="radio"
-                    name="withdrawal-payout-method"
-                    value="UPI"
-                    checked={payoutMethod === "UPI"}
-                    onChange={(event) => {
-                      setPayoutMethod(event.target.value);
-                      setWithdrawalDialogError("");
-                    }}
-                    required
-                  />
-                  <FiSmartphone aria-hidden="true" />
-                  <span>
-                    <strong>UPI</strong>
-                    <small>Receive your payout through UPI</small>
-                  </span>
-                </label>
-                <label className={payoutMethod === "BANK" ? "is-selected" : ""}>
-                  <input
-                    type="radio"
-                    name="withdrawal-payout-method"
-                    value="BANK"
-                    checked={payoutMethod === "BANK"}
-                    onChange={(event) => {
-                      setPayoutMethod(event.target.value);
-                      setWithdrawalDialogError("");
-                    }}
-                    required
-                  />
-                  <FiCreditCard aria-hidden="true" />
-                  <span>
-                    <strong>Bank</strong>
-                    <small>Receive your payout through bank transfer</small>
-                  </span>
-                </label>
-              </fieldset>
-              {payoutMethod === "UPI" && (
-                <div className="withdrawal-destination-fields">
-                  <label className="admin-field">
-                    <span>Name</span>
-                    <input
-                      autoComplete="name"
-                      maxLength={120}
-                      value={payoutDetails.name}
-                      onChange={(event) =>
-                        updatePayoutDetails("name", event.target.value)
-                      }
-                      placeholder="Account holder name"
-                      required
-                    />
-                  </label>
-                  <label className="admin-field">
-                    <span>UPI ID</span>
-                    <input
-                      autoComplete="off"
-                      maxLength={120}
-                      value={payoutDetails.upiId}
-                      onChange={(event) =>
-                        updatePayoutDetails("upiId", event.target.value)
-                      }
-                      placeholder="name@bank"
-                      required
-                    />
-                  </label>
-                </div>
+              {payoutLoading && (
+                <p className="withdrawal-method-note">Loading payout details…</p>
               )}
-              {payoutMethod === "BANK" && (
-                <div className="withdrawal-destination-fields">
-                  <label className="admin-field">
-                    <span>Account holder name</span>
-                    <input
-                      autoComplete="name"
-                      maxLength={120}
-                      value={payoutDetails.accountHolderName}
-                      onChange={(event) =>
-                        updatePayoutDetails(
-                          "accountHolderName",
-                          event.target.value,
-                        )
-                      }
-                      required
-                    />
-                  </label>
-                  <label className="admin-field">
-                    <span>Bank name</span>
-                    <input
-                      autoComplete="organization"
-                      maxLength={120}
-                      value={payoutDetails.bankName}
-                      onChange={(event) =>
-                        updatePayoutDetails("bankName", event.target.value)
-                      }
-                      required
-                    />
-                  </label>
-                  <label className="admin-field">
-                    <span>Account number</span>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      autoComplete="off"
-                      maxLength={34}
-                      value={payoutDetails.accountNumber}
-                      onChange={(event) =>
-                        updatePayoutDetails("accountNumber", event.target.value)
-                      }
-                      required
-                    />
-                  </label>
-                  <label className="admin-field">
-                    <span>IFSC / routing code</span>
-                    <input
-                      autoComplete="off"
-                      maxLength={20}
-                      value={payoutDetails.routingCode}
-                      onChange={(event) =>
-                        updatePayoutDetails("routingCode", event.target.value)
-                      }
-                      required
-                    />
-                  </label>
-                </div>
+              {!payoutLoading && savedPayout?.payoutMethod && (
+                <>
+                  <p className="withdrawal-method-note">
+                    Your payout will be sent to the method below. To change it,
+                    update it in{" "}
+                    <Link to="/payments">Manage Payments</Link>.
+                  </p>
+                  <PayoutSummary
+                    method={savedPayout.payoutMethod}
+                    details={savedPayout.payoutDetails}
+                  />
+                </>
+              )}
+              {!payoutLoading && !savedPayout?.payoutMethod && (
+                <p className="withdrawal-method-note">
+                  You haven't added payout details yet.{" "}
+                  <Link to="/payments">Add them in Manage Payments</Link> to
+                  continue.
+                </p>
               )}
               {withdrawalDialogError && (
                 <p className="withdrawal-method-error" role="alert">
@@ -651,7 +521,11 @@ export default function Withdrawals() {
                 <button
                   className="withdrawal-method-confirm"
                   type="submit"
-                  disabled={!payoutMethod || withdrawalSubmitting}
+                  disabled={
+                    payoutLoading ||
+                    !savedPayout?.payoutMethod ||
+                    withdrawalSubmitting
+                  }
                 >
                   {withdrawalSubmitting ? "Submitting..." : "Confirm request"}
                 </button>

@@ -18,6 +18,8 @@ export default function AdminWithdrawals() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [rejectingWithdrawal, setRejectingWithdrawal] = useState(null);
+  const [approvingWithdrawal, setApprovingWithdrawal] = useState(null);
+  const [transactionRef, setTransactionRef] = useState("");
   const [rejectionRemark, setRejectionRemark] = useState("");
   const [filters, setFilters] = useState({
     user: "",
@@ -55,19 +57,14 @@ export default function AdminWithdrawals() {
     load();
   }, []);
 
-  async function review(withdrawal, action, remark = "") {
-    const transactionRef =
-      action === "APPROVE"
-        ? window.prompt("Transaction reference:")
-        : undefined;
-    if (action === "APPROVE" && transactionRef === null) return;
+  async function review(withdrawal, action, remark = "", reference = "") {
     setReviewingId(withdrawal._id);
     setError("");
     setMessage("");
     try {
       await client.patch(`/admin/withdrawals/${withdrawal._id}`, {
         action,
-        transactionRef,
+        transactionRef: reference.trim(),
         rejectionReason: remark.trim(),
       });
       setMessage(
@@ -76,15 +73,38 @@ export default function AdminWithdrawals() {
       if (action === "REJECT") {
         setRejectingWithdrawal(null);
         setRejectionRemark("");
+      } else {
+        setApprovingWithdrawal(null);
+        setTransactionRef("");
       }
       await load();
     } catch (err) {
       setError(
-        err.response?.data?.error || "Could not update this withdrawal.",
+        err.response?.data?.error ||
+          (err.response
+            ? "Could not update this withdrawal."
+            : "Can't reach the StreamEarn API."),
       );
     } finally {
       setReviewingId(null);
     }
+  }
+
+  function openApproveDialog(withdrawal) {
+    setError("");
+    setTransactionRef("");
+    setApprovingWithdrawal(withdrawal);
+  }
+
+  function closeApproveDialog() {
+    if (reviewingId) return;
+    setApprovingWithdrawal(null);
+    setTransactionRef("");
+  }
+
+  function submitApproval(event) {
+    event.preventDefault();
+    review(approvingWithdrawal, "APPROVE", "", transactionRef);
   }
 
   function openRejectDialog(withdrawal) {
@@ -378,7 +398,7 @@ export default function AdminWithdrawals() {
                           <button
                             className="admin-row-action is-approve"
                             type="button"
-                            onClick={() => review(withdrawal, "APPROVE")}
+                            onClick={() => openApproveDialog(withdrawal)}
                             disabled={reviewingId === withdrawal._id}
                           >
                             {reviewingId === withdrawal._id
@@ -395,7 +415,15 @@ export default function AdminWithdrawals() {
                           </button>
                         </>
                       ) : (
-                        <span>{status === "PAID" ? "Paid" : "Reviewed"}</span>
+                        <span>{status === "APPROVED" || status === "PAID" ? "Approved" : "Reviewed"}</span>
+                      )}
+                      {status === "REJECTED" && withdrawal.rejectionReason && (
+                        <small
+                          className="admin-deposit-user-mobile"
+                          title={withdrawal.rejectionReason}
+                        >
+                          Remark: {withdrawal.rejectionReason}
+                        </small>
                       )}
                     </td>
                   </tr>
@@ -413,6 +441,65 @@ export default function AdminWithdrawals() {
           </tbody>
         </table>
       </div>
+      {approvingWithdrawal && (
+        <div
+          className="admin-reject-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeApproveDialog();
+          }}
+        >
+          <section
+            className="admin-reject-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="withdrawal-approve-title"
+          >
+            <div className="admin-reject-heading">
+              <span className="admin-eyebrow">PAYOUT DECISION</span>
+              <h3 id="withdrawal-approve-title">Approve withdrawal</h3>
+              <p>
+                ${Number(approvingWithdrawal.amount || 0).toFixed(2)} will be
+                deducted from{" "}
+                {approvingWithdrawal.userId?.email || "the user"}'s wallet.
+              </p>
+            </div>
+            <form onSubmit={submitApproval}>
+              <label className="admin-reject-field">
+                <span>Transaction reference (optional)</span>
+                <input
+                  value={transactionRef}
+                  onChange={(event) => setTransactionRef(event.target.value)}
+                  maxLength={120}
+                  placeholder="UTR / transfer reference"
+                  autoFocus
+                />
+              </label>
+              {error && (
+                <p className="admin-reject-error" role="alert">
+                  {error}
+                </p>
+              )}
+              <div className="admin-reject-actions">
+                <button
+                  className="admin-refresh"
+                  type="button"
+                  onClick={closeApproveDialog}
+                  disabled={Boolean(reviewingId)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="admin-row-action is-approve"
+                  type="submit"
+                  disabled={Boolean(reviewingId)}
+                >
+                  {reviewingId ? "Approving..." : "Confirm Approve"}
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
       {rejectingWithdrawal && (
         <div
           className="admin-reject-backdrop"

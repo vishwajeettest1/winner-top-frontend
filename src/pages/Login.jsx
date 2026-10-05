@@ -20,25 +20,55 @@ export default function Login() {
     window.setTimeout(() => setIsSweeping(false), 900);
     setIsSubmitting(true);
     try {
+      let userLoginError;
       try {
-        const adminRes = await client.post("/admin/login", { email, password });
-        if (!adminRes.data?.token)
-          throw new Error("Admin login returned no token");
-        logout();
-        localStorage.setItem("streamearn_admin_token", adminRes.data.token);
-        navigate("/admin");
+        const userRes = await client.post("/auth/login", { email, password });
+        const userToken = userRes.data?.token || userRes.data?.accessToken;
+        if (!userToken) {
+          throw new Error("The login response did not include an access token.");
+        }
+        localStorage.removeItem("streamearn_admin_token");
+        login(userToken);
+        navigate("/");
         return;
-      } catch (adminErr) {
-        const status = adminErr.response?.status;
-        if (!status || ![400, 401, 403, 404].includes(status)) throw adminErr;
+      } catch (err) {
+        userLoginError = err;
+        const status = err.response?.status;
+        if (!status || ![400, 401, 403, 404].includes(status)) throw err;
       }
 
-      const res = await client.post("/auth/login", { email, password });
-      localStorage.removeItem("streamearn_admin_token");
-      login(res.data.token);
-      navigate("/");
+      try {
+        const adminRes = await client.post("/admin/login", { email, password });
+        const adminToken = adminRes.data?.token || adminRes.data?.accessToken;
+        if (!adminToken) {
+          throw new Error("The admin login response did not include an access token.");
+        }
+        logout();
+        localStorage.setItem("streamearn_admin_token", adminToken);
+        navigate("/admin");
+      } catch (adminErr) {
+        const status = adminErr.response?.status;
+        if (!status || status >= 500) throw adminErr;
+        throw userLoginError;
+      }
     } catch (err) {
-      setError(err.response?.data?.error || "Login failed");
+      const status = err.response?.status;
+      const serverMessage = err.response?.data?.error || err.response?.data?.message;
+      if (serverMessage) {
+        setError(serverMessage);
+      } else if (!err.response && err.message?.includes("access token")) {
+        setError(err.message);
+      } else if (!err.response) {
+        setError(
+          "Can't reach the StreamEarn API. Check that the backend is running and VITE_API_BASE_URL points to its /api URL."
+        );
+      } else if (status === 429) {
+        setError("Too many login attempts. Please wait a few minutes and try again.");
+      } else if (status === 401 || status === 403) {
+        setError("Invalid email or password.");
+      } else {
+        setError(`Login failed (HTTP ${status}). Please try again.`);
+      }
     } finally {
       setIsSubmitting(false);
     }

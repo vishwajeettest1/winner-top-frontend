@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { FiChevronDown, FiMail, FiPhone, FiBookOpen } from "react-icons/fi";
+import { FiChevronDown, FiMail, FiPhone, FiBookOpen, FiMessageSquare } from "react-icons/fi";
 import ClientPageHeader from "../components/ClientPageHeader.jsx";
 
 const faqs = [
@@ -53,6 +53,17 @@ export default function HelpCenter() {
           <span aria-hidden="true">→</span>
         </Link>
       </div>
+
+      <Link to="/help-contact" className="help-ask-cta">
+        <span className="help-ask-cta-icon" aria-hidden="true">
+          <FiMessageSquare />
+        </span>
+        <span className="help-ask-cta-text">
+          <strong>Ask a question</strong>
+          <small>Raise a ticket and get an answer from our team</small>
+        </span>
+        <span className="help-ask-cta-arrow" aria-hidden="true">→</span>
+      </Link>
 
       <section className="help-support-card" aria-label="Support contact">
         <div className="help-support-heading">

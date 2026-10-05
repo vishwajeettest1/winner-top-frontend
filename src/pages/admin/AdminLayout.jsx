@@ -8,12 +8,14 @@ import {
   FiLogOut,
   FiUsers,
   FiVideo,
+  FiMessageSquare,
 } from "react-icons/fi";
 
 const navigation = [
   { to: "/admin", label: "Overview", icon: FiGrid, end: true },
   { to: "/admin/users", label: "Users", icon: FiUsers },
   { to: "/admin/withdrawals", label: "Withdrawals", icon: FiCreditCard },
+  { to: "/admin/supports", label: "Supports", icon: FiMessageSquare },
   { to: "/admin/content", label: "Video content", icon: FiVideo },
 ];
 

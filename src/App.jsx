@@ -11,13 +11,18 @@ import Wallet from "./pages/Wallet.jsx";
 import Referrals from "./pages/Referrals.jsx";
 import Withdrawals from "./pages/Withdrawals.jsx";
 import HelpCenter from "./pages/HelpCenter.jsx";
+import HelpContact from "./pages/HelpContact.jsx";
 import AboutUs from "./pages/AboutUs.jsx";
+import Profile from "./pages/Profile.jsx";
+import ChangePassword from "./pages/ChangePassword.jsx";
+import ManagePayments from "./pages/ManagePayments.jsx";
 import BottomNav from "./components/BottomNav.jsx";
 
 import AdminLayout from "./pages/admin/AdminLayout.jsx";
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
 import AdminUsers from "./pages/admin/AdminUsers.jsx";
 import AdminWithdrawals from "./pages/admin/AdminWithdrawals.jsx";
+import AdminContactRequests from "./pages/admin/AdminContactRequests.jsx";
 import AdminContent from "./pages/admin/AdminContent.jsx";
 import AdminDeposit from "./pages/admin/AdminDeposit.jsx";
 import AdminDepositHistory from "./pages/admin/AdminDepositHistory.jsx";
@@ -113,11 +118,52 @@ export default function App() {
             }
           />
           <Route
+            path="/help-contact"
+            element={
+              <RequireAuth>
+                <ClientLayout>
+                  <HelpContact />
+                </ClientLayout>
+              </RequireAuth>
+            }
+          />
+          <Route
             path="/about"
             element={
               <RequireAuth>
                 <ClientLayout>
                   <AboutUs />
+                </ClientLayout>
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="/profile"
+            element={
+              <RequireAuth>
+                <ClientLayout>
+                  <Profile />
+                </ClientLayout>
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/change-password"
+            element={
+              <RequireAuth>
+                <ClientLayout>
+                  <ChangePassword />
+                </ClientLayout>
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/payments"
+            element={
+              <RequireAuth>
+                <ClientLayout>
+                  <ManagePayments />
                 </ClientLayout>
               </RequireAuth>
             }
@@ -148,6 +194,14 @@ export default function App() {
             element={
               <RequireAdmin>
                 <AdminWithdrawals />
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/supports"
+            element={
+              <RequireAdmin>
+                <AdminContactRequests />
               </RequireAdmin>
             }
           />
